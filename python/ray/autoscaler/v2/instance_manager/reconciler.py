@@ -195,6 +195,17 @@ class RayStateReconciler(IReconciler):
     def _reconciled_im_status_from_ray_status(
         ray_status: NodeStatus, cur_im_status: IMInstance.InstanceStatus
     ) -> Optional["IMInstance.InstanceStatus"]:
+        """
+        Reconcile the instance status from the ray node status.
+
+        Args:
+            ray_status: the current ray node status.
+            cur_im_status: the current IM instance status.
+
+        Returns:
+            The reconciled IM instance status, or None if no reconciliation
+            could be done,  e.g. the ray node has an undefined status.
+        """
         reconciled_im_status = None
         if ray_status in [NodeStatus.RUNNING, NodeStatus.IDLE]:
             reconciled_im_status = IMInstance.RAY_RUNNING

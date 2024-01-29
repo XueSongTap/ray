@@ -30,6 +30,9 @@ class InstanceUtil:
     in instance_manager.proto
     """
 
+    # Memoized reachable from sets, where the key is the instance status, and
+    # the value is the set of instance status that is reachable from the key
+    # instance status.
     _reachable_from: Optional[
         Dict["Instance.InstanceStatus", Set["Instance.InstanceStatus"]]
     ] = None
@@ -272,6 +275,19 @@ class InstanceUtil:
         cls,
         instance_status: Instance.InstanceStatus,
     ) -> Set["Instance.InstanceStatus"]:
+        """
+        Returns the set of instance status that is reachable from the given
+        instance status following the status transitions.
+
+        This method is memoized.
+
+        Args:
+            instance_status: The instance status to start from.
+
+        Returns:
+            The set of instance status that is reachable from the given instance
+            status.
+        """
         if cls._reachable_from is None:
             cls._compute_reachable()
         return cls._reachable_from[instance_status]
