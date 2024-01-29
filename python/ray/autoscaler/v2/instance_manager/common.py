@@ -30,6 +30,10 @@ class InstanceUtil:
     in instance_manager.proto
     """
 
+    _reachable_from: Optional[
+        Dict["Instance.InstanceStatus", Set["Instance.InstanceStatus"]]
+    ] = None
+
     @staticmethod
     def new_instance(
         instance_id: str,
@@ -70,14 +74,7 @@ class InstanceUtil:
         Returns True if the instance is in a status where it may transition
         to RAY_RUNNING status.
         """
-        assert instance_status != Instance.UNKNOWN
-        return instance_status in [
-            Instance.UNKNOWN,
-            Instance.QUEUED,
-            Instance.REQUESTED,
-            Instance.ALLOCATED,
-            Instance.RAY_INSTALLING,
-        ]
+        return Instance.RAY_RUNNING in InstanceUtil.reachable_from(instance_status)
 
     @staticmethod
     def set_status(
@@ -269,3 +266,40 @@ class InstanceUtil:
             ts_list.append(status_update.timestamp_ns)
 
         return ts_list
+
+    @classmethod
+    def reachable_from(
+        cls,
+        instance_status: Instance.InstanceStatus,
+    ) -> Set["Instance.InstanceStatus"]:
+        if cls._reachable_from is None:
+            cls._compute_reachable()
+        return cls._reachable_from[instance_status]
+
+    @classmethod
+    def _compute_reachable(cls):
+        """
+        Computes and memorize the from status sets for each status machine with
+        a DFS search.
+        """
+        valid_transitions = cls.get_valid_transitions()
+
+        def dfs(graph, start, visited=None):
+            """
+            Regular DFS algorithm to find all reachable nodes from a given node.
+            """
+            if visited is None:
+                visited = set()
+            for next_node in graph[start]:
+                if next_node not in visited:
+                    # We delay adding the visited set here so we could capture
+                    # the self loop.
+                    visited.add(next_node)
+                    dfs(graph, next_node, visited)
+            return visited
+
+        # Initialize the graphs
+        cls._reachable_from = {}
+        for status in Instance.InstanceStatus.values():
+            # All nodes reachable from 'start'
+            cls._reachable_from[status] = dfs(valid_transitions, status)

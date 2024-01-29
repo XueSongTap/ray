@@ -39,12 +39,14 @@ def create_instance(
     status=Instance.UNKNOWN,
     version=0,
     instance_type="worker_nodes1",
+    cloud_instance_id="",
 ):
     return Instance(
         instance_id=instance_id,
         status=status,
         version=version,
         instance_type=instance_type,
+        cloud_instance_id=cloud_instance_id,
     )
 
 

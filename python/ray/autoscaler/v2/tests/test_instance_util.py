@@ -196,6 +196,45 @@ class InstanceUtilTest(unittest.TestCase):
                 s, Instance.RAY_RUNNING, InstanceUtil.get_valid_transitions()
             )
 
+    def test_reachable_from(self):
+        def add_reachable_from(reachable, src, transitions):
+            reachable[src] = set()
+            for dst in transitions[src]:
+                reachable[src].add(dst)
+                reachable[src] |= (
+                    reachable[dst] if reachable[dst] is not None else set()
+                )
+
+        expected_reachable = {s: None for s in Instance.InstanceStatus.values()}
+
+        # Error status and terminal status.
+        expected_reachable[Instance.ALLOCATION_FAILED] = set()
+        expected_reachable[Instance.UNKNOWN] = set()
+        expected_reachable[Instance.STOPPED] = set()
+
+        transitions = InstanceUtil.get_valid_transitions()
+
+        # Recursively build the reachable set from terminal statuses.
+        add_reachable_from(expected_reachable, Instance.STOPPING, transitions)
+        add_reachable_from(expected_reachable, Instance.RAY_STOPPED, transitions)
+        add_reachable_from(expected_reachable, Instance.RAY_STOPPING, transitions)
+        add_reachable_from(expected_reachable, Instance.RAY_RUNNING, transitions)
+        add_reachable_from(expected_reachable, Instance.RAY_INSTALL_FAILED, transitions)
+        add_reachable_from(expected_reachable, Instance.RAY_INSTALLING, transitions)
+        add_reachable_from(expected_reachable, Instance.ALLOCATED, transitions)
+        add_reachable_from(expected_reachable, Instance.REQUESTED, transitions)
+        add_reachable_from(expected_reachable, Instance.QUEUED, transitions)
+
+        # handle self loops
+        expected_reachable[Instance.QUEUED] |= {Instance.QUEUED}
+        expected_reachable[Instance.REQUESTED] |= {Instance.REQUESTED}
+
+        for s, expected_reachable in expected_reachable.items():
+            assert InstanceUtil.reachable_from(s) == expected_reachable, (
+                f"reachable_from({s}) = {InstanceUtil.reachable_from(s)} "
+                f"!= {expected_reachable}"
+            )
+
 
 if __name__ == "__main__":
     if os.environ.get("PARALLEL_CI"):
