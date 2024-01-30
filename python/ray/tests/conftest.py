@@ -1183,7 +1183,7 @@ def create_ray_logs_for_failed_test(rep):
 
     # We temporarily restrict to Linux until we have artifact dirs
     # for Windows and Mac
-    if platform.system() != "Linux":
+    if platform.system() != "Linux" and platform.system() != "Windows":
         return
 
     # Only archive failed tests after the "call" phase of the test
